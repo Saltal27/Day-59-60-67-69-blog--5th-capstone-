@@ -4,7 +4,7 @@ from flask_ckeditor import CKEditor
 from datetime import date
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, joinedload
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ManageAdmins
 from flask_gravatar import Gravatar
@@ -16,13 +16,13 @@ app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap(app)
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
 # CONNECT TO DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
-login_manager = LoginManager()
-login_manager.init_app(app)
 
 
 # Users table in db
@@ -33,31 +33,43 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(100))
     name = db.Column(db.String(1000))
     status = db.Column(db.String)
-    posts = db.relationship('BlogPost', backref='user', lazy=True)
+    posts = db.relationship('BlogPost', backref='author', lazy=True)
+    comments = db.relationship('PostComments', backref='user', lazy=True)
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'<User {self.name}>'
 
 
 # Blog posts table in db
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.String(250), nullable=False)
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
-    user_status = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    comments = db.relationship('PostComments', backref='blog_post', lazy=True)
 
     def __repr__(self):
         return f'<BlogPost {self.title}>'
 
 
-with app.app_context():
-    db.create_all()
+# Comments table in db
+class PostComments(db.Model):
+    __tablename__ = "comments"
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<Comment {self.id}>'
+
+
+# with app.app_context():
+#     db.create_all()
 
 
 def add_user_db(name, email, password, status):
@@ -96,8 +108,7 @@ def load_user(user_id):
 
 @app.route('/')
 def get_all_posts():
-    with app.app_context():
-        posts = BlogPost.query.all()
+    posts = BlogPost.query.options(joinedload(BlogPost.author)).all()
     return render_template("index.html", all_posts=posts)
 
 
@@ -105,18 +116,23 @@ def get_all_posts():
 def register():
     register_form = RegisterForm()
     if register_form.validate_on_submit():
+        name = register_form.name.data
         email = register_form.email.data
         password = register_form.password.data
-        name = register_form.name.data
+        confirm_password = register_form.confirm_password.data
         salted_hash = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
 
         existing_user = User.query.filter_by(email=email).first()
 
         if existing_user is None:
-            add_user_db(name, email, salted_hash, "member")
-            user = User.query.filter_by(email=email).first()
-            login_user(user)
-            return redirect(url_for('get_all_posts'))
+            if password == confirm_password:
+                add_user_db(name, email, salted_hash, "member")
+                user = User.query.filter_by(email=email).first()
+                login_user(user)
+                return redirect(url_for('get_all_posts'))
+            else:
+                flash("Passwords don't match, please try again.")
+
         else:
             flash("You've already signed up with that email, log in instead!")
             return redirect(url_for('login'))
@@ -145,6 +161,7 @@ def login():
 
 
 @app.route('/logout')
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('get_all_posts'))
@@ -179,10 +196,8 @@ def add_new_post():
                 subtitle=form.subtitle.data,
                 body=form.body.data,
                 img_url=form.img_url.data,
-                author=current_user.name,
                 date=date.today().strftime("%B %d, %Y"),
-                user_id=current_user.id,
-                user_status=current_user.status
+                user_id=current_user.id
             )
             db.session.add(new_post)
             db.session.commit()
@@ -200,7 +215,6 @@ def edit_post(post_id):
         title=post.title,
         subtitle=post.subtitle,
         img_url=post.img_url,
-        author=post.author,
         body=post.body
     )
     if edit_form.validate_on_submit():
