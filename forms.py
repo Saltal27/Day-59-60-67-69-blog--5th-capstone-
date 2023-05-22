@@ -29,3 +29,9 @@ class LoginForm(FlaskForm):
 class CommentForm(FlaskForm):
     comment = StringField("Comment", validators=[DataRequired()])
     submit = SubmitField("Comment")
+
+
+class ManageAdmins(FlaskForm):
+    email = StringField("User's Email", validators=[DataRequired(), Email()])
+    promote = SubmitField("Promote To Admin")
+    demote = SubmitField("Demote Admin")

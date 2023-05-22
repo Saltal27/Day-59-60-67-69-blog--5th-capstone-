@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ManageAdmins
 from flask_gravatar import Gravatar
 from functools import wraps
 from flask import abort
@@ -32,6 +32,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
     name = db.Column(db.String(1000))
+    status = db.Column(db.String)
     posts = db.relationship('BlogPost', backref='user', lazy=True)
 
     def __repr__(self):
@@ -48,30 +49,41 @@ class BlogPost(db.Model):
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
+    user_status = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     def __repr__(self):
         return f'<BlogPost {self.title}>'
 
 
-# with app.app_context():
-#     db.create_all()
+with app.app_context():
+    db.create_all()
 
 
-def add_user_db(name, email, password):
+def add_user_db(name, email, password, status):
     with app.app_context():
         new_user = User()
         new_user.name = name
         new_user.email = email
         new_user.password = password
+        new_user.status = status
         db.session.add(new_user)
         db.session.commit()
+
+
+def owner_only(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if current_user.status != "owner":
+            abort(403)
+        return func(*args, **kwargs)
+    return decorated_view
 
 
 def admin_only(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if current_user.id != 1:
+        if current_user.status != "owner" and current_user.status != "admin":
             abort(403)
         return func(*args, **kwargs)
     return decorated_view
@@ -101,7 +113,7 @@ def register():
         existing_user = User.query.filter_by(email=email).first()
 
         if existing_user is None:
-            add_user_db(name, email, salted_hash)
+            add_user_db(name, email, salted_hash, "member")
             user = User.query.filter_by(email=email).first()
             login_user(user)
             return redirect(url_for('get_all_posts'))
@@ -168,7 +180,8 @@ def add_new_post():
                 img_url=form.img_url.data,
                 author=current_user.name,
                 date=date.today().strftime("%B %d, %Y"),
-                user_id=current_user.id
+                user_id=current_user.id,
+                user_status=current_user.status
             )
             db.session.add(new_post)
             db.session.commit()
@@ -207,6 +220,43 @@ def delete_post(post_id):
     db.session.delete(post_to_delete)
     db.session.commit()
     return redirect(url_for('get_all_posts'))
+
+
+@app.route("/manage_admins", methods=["GET", "POST"])
+@owner_only
+def manage_admins():
+    manage_admins_form = ManageAdmins()
+    subheading = "Time to promote / demote some users!"
+
+    if manage_admins_form.validate_on_submit():
+        email = manage_admins_form.email.data
+        user = User.query.filter_by(email=email).first()
+
+        if user:  # Check if the email matches an existent user
+            if manage_admins_form.promote.data:  # Check if the promote button had been clicked
+                if user.status == "member":  # Check the user's original status
+                    user.status = "admin"
+                    db.session.commit()
+                    subheading = f"Successfully promoted {user.name} to an admin!"
+                else:
+                    flash("This user is already an admin.")
+
+            elif manage_admins_form.demote.data:  # Check if the demote button had been clicked
+                if user.status == "admin":  # Check the user's original status
+                    user.status = "member"
+                    db.session.commit()
+                    subheading = f"Successfully demoted {user.name} to a member!"
+                else:
+                    flash("This user is already a member.")
+
+        else:
+            flash('Email does not exist, please try again.')
+
+    return render_template(
+        'manage-admins.html',
+        manage_admins_form=manage_admins_form,
+        subheading=subheading
+    )
 
 
 if __name__ == "__main__":

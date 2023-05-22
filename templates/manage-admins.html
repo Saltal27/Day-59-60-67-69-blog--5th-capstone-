@@ -1,0 +1,42 @@
+{% extends 'bootstrap/base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block content %}
+{% include "header.html" %}
+
+  <!-- Page Header -->
+  <header class="masthead" style="background-image: url('https://images.unsplash.com/photo-1664575602276-acd073f104c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8bWFuYWdlcnxlbnwwfHwwfHx8MA%3D%3D&w=1000&q=80')">
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+          <div class="page-heading">
+            <h1>Manage Admins</h1>
+            <span class="subheading">{{ subheading }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="row">
+
+      <div class="col-lg-8 col-md-10 mx-auto content">
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                <p style="color: red;">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {{ wtf.quick_form(manage_admins_form, novalidate=True, button_map={"promote": "primary", "demote": "secondary"}) }}
+
+      </div>
+    </div>
+  </div>
+
+
+{% include "footer.html" %}
+{% endblock %}
