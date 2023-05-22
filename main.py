@@ -61,8 +61,9 @@ class PostComments(db.Model):
     __tablename__ = "comments"
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
+    date = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id', ondelete='CASCADE'), nullable=False)
 
     def __repr__(self):
         return f'<Comment {self.id}>'
@@ -80,6 +81,14 @@ def add_user_db(name, email, password, status):
         new_user.password = password
         new_user.status = status
         db.session.add(new_user)
+        db.session.commit()
+
+
+def add_comment_db(comment):
+    with app.app_context():
+        new_comment = PostComments()
+        new_comment.name = comment
+        db.session.add(new_comment)
         db.session.commit()
 
 
@@ -167,11 +176,33 @@ def logout():
     return redirect(url_for('get_all_posts'))
 
 
-@app.route("/post/<int:post_id>")
+@app.route("/post/<int:post_id>", methods=["POST", "GET"])
 def show_post(post_id):
     comment_form = CommentForm()
+
+    if comment_form.validate_on_submit():
+        if current_user.is_authenticated:
+            with app.app_context():
+                new_comment = PostComments(
+                    text=comment_form.comment.data,
+                    date=date.today().strftime("%B %d, %Y"),
+                    user_id=current_user.id,
+                    post_id=post_id
+                )
+                db.session.add(new_comment)
+                db.session.commit()
+        else:
+            flash("You need to register / login in order to comment.")
+            return redirect(url_for("login"))
+
     requested_post = BlogPost.query.get(post_id)
-    return render_template("post.html", post=requested_post, comment_form=comment_form)
+    all_post_comments = requested_post.comments
+    return render_template(
+        "post.html",
+        post=requested_post,
+        comment_form=comment_form,
+        all_post_comments=all_post_comments
+    )
 
 
 @app.route("/about")
@@ -231,6 +262,9 @@ def edit_post(post_id):
 @app.route("/delete/<int:post_id>")
 @admin_only
 def delete_post(post_id):
+    PostComments.query.filter_by(post_id=post_id).delete()
+    db.session.commit()
+
     post_to_delete = BlogPost.query.get(post_id)
     db.session.delete(post_to_delete)
     db.session.commit()

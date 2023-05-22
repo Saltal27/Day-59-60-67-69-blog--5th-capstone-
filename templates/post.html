@@ -36,19 +36,26 @@
 
 <!--           Comments Area -->
           <div class="col-lg-8 col-md-10 mx-auto comment">
-            {{ wtf.quick_form(comment_form, novalidate=True, button_map={"submit": "primary"}) }}
             {{ ckeditor.load() }}
             {{ ckeditor.config(name='comment') }}
+            {{ wtf.quick_form(comment_form, novalidate=True, button_map={"submit": "primary"}) }}
               <ul class="commentList">
-                <li>
-                    <div class="commenterImage">
-                      <img src="https://pbs.twimg.com/profile_images/744849215675838464/IH0FNIXk.jpg"/>
-                    </div>
-                    <div class="commentText">
-                      <p>Some comment</p>
-                      <span class="date sub-text">comment author name</span>
-                    </div>
-                </li>
+                {% for comment in all_post_comments: %}
+                  <li>
+                      <div class="commenterImage">
+                        <img src="https://pbs.twimg.com/profile_images/744849215675838464/IH0FNIXk.jpg"/>
+                      </div>
+                      <div class="commentText">
+                        <p>{{ comment.text|safe }}</p>
+                        {% if comment.user.status == "owner" or comment.user.status == "admin":  %}
+                        <span class="date sub-text">{{ comment.user.name }}, {{ comment.user.status }}</span>
+                        {% else: %}
+                        <span class="date sub-text">{{ comment.user.name }}</span>
+                        {% endif %}
+                        <br>
+                        <span class="date sub-text">{{ comment.date }}</span>                      </div>
+                  </li>
+                {% endfor %}
               </ul>
             </div>
 
