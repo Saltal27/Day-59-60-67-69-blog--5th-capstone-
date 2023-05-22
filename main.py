@@ -171,6 +171,7 @@ def contact():
 @admin_only
 def add_new_post():
     form = CreatePostForm()
+    h1 = "New Post"
     if form.validate_on_submit():
         with app.app_context():
             new_post = BlogPost(
@@ -187,13 +188,14 @@ def add_new_post():
             db.session.commit()
         return redirect(url_for("get_all_posts"))
 
-    return render_template("make-post.html", form=form)
+    return render_template("make-post.html", form=form, h1=h1)
 
 
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @admin_only
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
+    h1 = "Edit Post"
     edit_form = CreatePostForm(
         title=post.title,
         subtitle=post.subtitle,
@@ -205,12 +207,11 @@ def edit_post(post_id):
         post.title = edit_form.title.data
         post.subtitle = edit_form.subtitle.data
         post.img_url = edit_form.img_url.data
-        post.author = edit_form.author.data
         post.body = edit_form.body.data
         db.session.commit()
         return redirect(url_for("show_post", post_id=post.id))
 
-    return render_template("make-post.html", form=edit_form)
+    return render_template("make-post.html", form=edit_form, h1=h1)
 
 
 @app.route("/delete/<int:post_id>")
