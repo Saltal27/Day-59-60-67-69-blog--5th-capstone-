@@ -36,3 +36,11 @@ class ManageAdmins(FlaskForm):
     email = StringField("User's Email", validators=[DataRequired(), Email()])
     promote = SubmitField("Promote To Admin")
     demote = SubmitField("Demote Admin")
+
+
+class ContactMe(FlaskForm):
+    name = StringField("Name", validators=[DataRequired()])
+    email = StringField("Email Address", validators=[DataRequired(), Email()])
+    phone_number = StringField("Phone Number", validators=[DataRequired()])
+    message = StringField("Message", validators=[DataRequired()])
+    submit = SubmitField("Send")

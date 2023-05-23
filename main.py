@@ -6,10 +6,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, joinedload
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ManageAdmins
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ManageAdmins, ContactMe
 from flask_gravatar import Gravatar
 from functools import wraps
 from flask import abort
+import smtplib
+import os
+
+MY_EMAIL = os.environ.get("MY_EMAIL")
+MY_PASSWORD = os.environ.get("MY_PASSWORD")
 
 # ------------------ Initializing A Flask App With Some Extensions --------------------- #
 # Initialize the Flask app and set a secret key
@@ -269,7 +274,7 @@ def about():
     return render_template("about.html")
 
 
-@app.route("/contact")
+@app.route("/contact", methods=["POST", "GET"])
 def contact():
     """
     A route to display the contact page.
@@ -278,7 +283,33 @@ def contact():
     str: The rendered HTML template for the contact page.
     """
 
-    return render_template("contact.html")
+    contact_form = ContactMe()
+    if contact_form.validate_on_submit():
+        name = contact_form.name.data
+        email = contact_form.email.data
+        phone = contact_form.phone_number.data
+        message = contact_form.message.data
+        try:
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=60) as connection:
+                connection.starttls()
+                connection.login(user=MY_EMAIL, password=MY_PASSWORD)
+                connection.sendmail(
+                    from_addr=MY_EMAIL,
+                    to_addrs="omarmobarak53@gmail.com",
+                    msg=f"Subject: New message from a 'Omar's Blog' user\n\n"
+                        f"Name: {name}\n"
+                        f"Email: {email}\n"
+                        f"Phone Number: {phone}\n"
+                        f"Message: {message}\n"
+                )
+        except smtplib.SMTPException:
+            flash("Sorry, there was an error sending your message, please try again later.")
+        else:
+            span = "Successfully sent your message!"
+
+    else:
+        span = "Have questions? I have answers."
+    return render_template("contact.html", contact_form=contact_form, span=span)
 
 
 # ---------------------------- Posts Managing Routes ------------------------------- #
