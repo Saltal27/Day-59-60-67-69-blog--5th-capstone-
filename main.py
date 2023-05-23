@@ -11,7 +11,7 @@ from flask_gravatar import Gravatar
 from functools import wraps
 from flask import abort
 
-
+# ------------------ Initializing A Flask App With Some Extensions --------------------- #
 # Initialize the Flask app and set a secret key
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
@@ -22,6 +22,7 @@ ckeditor = CKEditor(app)
 # Initialize the Bootstrap extension
 Bootstrap(app)
 
+# Initialize the Gravatar extension wit default parameters
 gravatar = Gravatar(app,
                     size=100,
                     rating='g',
@@ -41,8 +42,25 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
+# ---------------------------- DB Tables ------------------------------- #
 # Users table in db
 class User(UserMixin, db.Model):
+    """
+    A class representing the users table in the database.
+
+    Attributes:
+    id (int): The unique identifier of the user.
+    email (str): The email address of the user.
+    password (str): The password of the user.
+    name (str): The name of the user.
+    status (str): The status of the user.
+    posts (Relationship): The posts made by the user.
+    comments (Relationship): The comments made by the user.
+
+    Methods:
+    __repr__(): Returns a string representation of the user.
+    """
+
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True)
@@ -58,6 +76,23 @@ class User(UserMixin, db.Model):
 
 # Blog posts table in db
 class BlogPost(db.Model):
+    """
+    A class representing the blog_posts table in the database.
+
+    Attributes:
+    id (int): The unique identifier of the blog post.
+    title (str): The title of the blog post.
+    subtitle (str): The subtitle of the blog post.
+    date (str): The date the blog post was posted.
+    body (str): The content of the blog post.
+    img_url (str): The URL of the image for the blog post.
+    user_id (int): The unique identifier of the user who created the blog post.
+    comments (Relationship): The comments made on the blog post.
+
+    Methods:
+    __repr__(): Returns a string representation of the blog post.
+    """
+
     __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(250), unique=True, nullable=False)
@@ -74,6 +109,19 @@ class BlogPost(db.Model):
 
 # Comments table in db
 class PostComments(db.Model):
+    """
+    A class representing the comments table in the database.
+
+    Attributes:
+    id (int): The unique identifier of the comment.
+    text (str): The text of the comment.
+    date (str): The date the comment was posted.
+    user_id (int): The unique identifier of the user who made the comment.
+    post_id (int): The unique identifier of the blog post the comment was made on.
+
+    Methods:
+    __repr__(): Returns a string representation of the comment.
+    """
     __tablename__ = "comments"
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
@@ -89,7 +137,22 @@ class PostComments(db.Model):
 #     db.create_all()
 
 
+# ---------------------------- Custom Functions ------------------------------- #
+# Create a custom function to add users to the database
 def add_user_db(name, email, password, status):
+    """
+    A custom function to add a new user to the database.
+
+    Parameters:
+    name (str): The name of the new user.
+    email (str): The email address of the new user.
+    password (str): The password of the new user.
+    status (str): The status of the new user.
+
+    Returns:
+    None
+    """
+
     with app.app_context():
         new_user = User()
         new_user.name = name
@@ -102,93 +165,135 @@ def add_user_db(name, email, password, status):
 
 # Create a custom decorator to restrict access to owner-only pages
 def owner_only(func):
+    """
+    A custom decorator to restrict access to owner-only pages.
+
+    Parameters:
+    func (function): The function being decorated.
+
+    Returns:
+    function: The decorated function.
+    """
+
     @wraps(func)
     def decorated_view(*args, **kwargs):
         if current_user.status != "owner":
             abort(403)
         return func(*args, **kwargs)
+
     return decorated_view
 
 
 # Create a custom decorator to restrict access to admin-only pages
 def admin_only(func):
+    """
+    A custom decorator to restrict access to admin-only pages.
+
+    Parameters:
+    func (function): The function being decorated.
+
+    Returns:
+    function: The decorated function.
+    """
+
     @wraps(func)
     def decorated_view(*args, **kwargs):
         if current_user.status != "owner" and current_user.status != "admin":
             abort(403)
         return func(*args, **kwargs)
+
     return decorated_view
+
+
+# Create a custom decorator to restrict access to non-logged-in users
+def logout_required(func):
+    """
+    A decorator function that restricts access to a route to only logged-out users.
+
+    Args:
+    func: The function to be decorated.
+
+    Returns:
+    function: The decorated function.
+    """
+
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated:
+            flash('You must log out to access this page.')
+            return redirect(url_for('get_all_posts'))
+        return func(*args, **kwargs)
+
+    return decorated_function
 
 
 # Set up the user loader function
 @login_manager.user_loader
 def load_user(user_id):
+    """
+    A function to load a user from the database.
+
+    Parameters:
+    user_id (int): The ID of the user to be loaded.
+
+    Returns:
+    object: The user with the specified ID.
+    """
+
     return User.query.get(int(user_id))
 
 
+# ---------------------------- Main Pages Routes ------------------------------- #
 @app.route('/')
 def get_all_posts():
+    """
+    A route to display all the blog posts.
+
+    Returns:
+    str: The rendered HTML template with all the blog posts.
+    """
+
     posts = BlogPost.query.options(joinedload(BlogPost.author)).all()
     return render_template("index.html", all_posts=posts)
 
 
-@app.route('/register', methods=["POST", "GET"])
-def register():
-    register_form = RegisterForm()
-    if register_form.validate_on_submit():
-        name = register_form.name.data
-        email = register_form.email.data
-        password = register_form.password.data
-        confirm_password = register_form.confirm_password.data
-        salted_hash = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+@app.route("/about")
+def about():
+    """
+    A route to display the about page.
 
-        existing_user = User.query.filter_by(email=email).first()
+    Returns:
+    str: The rendered HTML template for the about page.
+    """
 
-        if existing_user is None:
-            if password == confirm_password:
-                add_user_db(name, email, salted_hash, "member")
-                user = User.query.filter_by(email=email).first()
-                login_user(user)
-                return redirect(url_for('get_all_posts'))
-            else:
-                flash("Passwords don't match, please try again.")
-
-        else:
-            flash("You've already signed up with that email, log in instead!")
-            return redirect(url_for('login'))
-
-    return render_template("register.html", register_form=register_form)
+    return render_template("about.html")
 
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    login_form = LoginForm()
-    if login_form.validate_on_submit():
-        email = login_form.email.data
-        password = login_form.password.data
-        user = User.query.filter_by(email=email).first()
+@app.route("/contact")
+def contact():
+    """
+    A route to display the contact page.
 
-        if user:
-            if check_password_hash(user.password, password):
-                login_user(user)
-                return redirect(url_for('get_all_posts'))
-            else:
-                flash('Incorrect password, please try again.')
-        else:
-            flash('Email does not exist, please try again.')
+    Returns:
+    str: The rendered HTML template for the contact page.
+    """
 
-    return render_template('login.html', login_form=login_form)
+    return render_template("contact.html")
 
 
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('get_all_posts'))
-
-
+# ---------------------------- Posts Managing Routes ------------------------------- #
 @app.route("/post/<int:post_id>", methods=["POST", "GET"])
 def show_post(post_id):
+    """
+    A route to display a single blog post and its comments.
+
+    Parameters:
+    post_id (int): The ID of the blog post to be displayed.
+
+    Returns:
+    str: The rendered HTML template for the blog post and its comments.
+    """
+
     comment_form = CommentForm()
 
     if comment_form.validate_on_submit():
@@ -216,19 +321,16 @@ def show_post(post_id):
     )
 
 
-@app.route("/about")
-def about():
-    return render_template("about.html")
-
-
-@app.route("/contact")
-def contact():
-    return render_template("contact.html")
-
-
 @app.route("/new-post", methods=["GET", "POST"])
 @admin_only
 def add_new_post():
+    """
+    A route to add a new blog post.
+
+    Returns:
+    str: The rendered HTML template for creating a new blog post.
+    """
+
     form = CreatePostForm()
     h1 = "New Post"
     if form.validate_on_submit():
@@ -251,6 +353,16 @@ def add_new_post():
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @admin_only
 def edit_post(post_id):
+    """
+    A route to edit an existing blog post.
+
+    Parameters:
+    post_id (int): The ID of the blog post to be edited.
+
+    Returns:
+    str: The rendered HTML template for editing a blog post.
+    """
+
     post = BlogPost.query.get(post_id)
     h1 = "Edit Post"
     edit_form = CreatePostForm(
@@ -273,6 +385,16 @@ def edit_post(post_id):
 @app.route("/delete/<int:post_id>")
 @admin_only
 def delete_post(post_id):
+    """
+    A route to delete an existing blog post.
+
+    Parameters:
+    post_id (int): The ID of the blog post to be deleted.
+
+    Returns:
+    str: A redirection to the main blog page after deleting the post.
+    """
+
     PostComments.query.filter_by(post_id=post_id).delete()
     db.session.commit()
 
@@ -282,9 +404,95 @@ def delete_post(post_id):
     return redirect(url_for('get_all_posts'))
 
 
+# ---------------------------- Users Managing Routes ------------------------------- #
+@app.route('/register', methods=["POST", "GET"])
+@logout_required
+def register():
+    """
+    A route to register a new user.
+
+    Returns:
+    str: The rendered HTML template for registering a new user.
+    """
+
+    register_form = RegisterForm()
+    if register_form.validate_on_submit():
+        name = register_form.name.data
+        email = register_form.email.data
+        password = register_form.password.data
+        confirm_password = register_form.confirm_password.data
+        salted_hash = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+
+        existing_user = User.query.filter_by(email=email).first()
+
+        if existing_user is None:
+            if password == confirm_password:
+                add_user_db(name, email, salted_hash, "member")
+                user = User.query.filter_by(email=email).first()
+                login_user(user)
+                return redirect(url_for('get_all_posts'))
+            else:
+                flash("Passwords don't match, please try again.")
+
+        else:
+            flash("You've already signed up with that email, log in instead!")
+            return redirect(url_for('login'))
+
+    return render_template("register.html", register_form=register_form)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+@logout_required
+def login():
+    """
+    A route to log in an existing user.
+
+    Returns:
+    str: The rendered HTML template for logging in an existing user.
+    """
+
+    login_form = LoginForm()
+    if login_form.validate_on_submit():
+        email = login_form.email.data
+        password = login_form.password.data
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            if check_password_hash(user.password, password):
+                login_user(user)
+                return redirect(url_for('get_all_posts'))
+            else:
+                flash('Incorrect password, please try again.')
+        else:
+            flash('Email does not exist, please try again.')
+
+    return render_template('login.html', login_form=login_form)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """
+    A route to log out the current user.
+
+    Returns:
+    str: A redirection to the main blog page after logging out.
+    """
+
+    logout_user()
+    return redirect(url_for('get_all_posts'))
+
+
 @app.route("/manage_admins", methods=["GET", "POST"])
 @owner_only
 def manage_admins():
+    """
+    A route to manage the admin status of users.
+
+    Returns:
+    str: The rendered HTML template for managing the admin status of users.
+    """
+
     manage_admins_form = ManageAdmins()
     subheading = "Time to promote / demote some users!"
 
