@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
@@ -11,15 +11,31 @@ from flask_gravatar import Gravatar
 from functools import wraps
 from flask import abort
 
+
+# Initialize the Flask app and set a secret key
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+
+# Initialize the CKEditor extension
 ckeditor = CKEditor(app)
+
+# Initialize the Bootstrap extension
 Bootstrap(app)
 
+gravatar = Gravatar(app,
+                    size=100,
+                    rating='g',
+                    default='retro',
+                    force_default=False,
+                    force_lower=False,
+                    use_ssl=False,
+                    base_url=None)
+
+# Initialize the Flask-Login extension
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-# CONNECT TO DB
+# Set up the database connection
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -84,14 +100,7 @@ def add_user_db(name, email, password, status):
         db.session.commit()
 
 
-def add_comment_db(comment):
-    with app.app_context():
-        new_comment = PostComments()
-        new_comment.name = comment
-        db.session.add(new_comment)
-        db.session.commit()
-
-
+# Create a custom decorator to restrict access to owner-only pages
 def owner_only(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -101,6 +110,7 @@ def owner_only(func):
     return decorated_view
 
 
+# Create a custom decorator to restrict access to admin-only pages
 def admin_only(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -110,6 +120,7 @@ def admin_only(func):
     return decorated_view
 
 
+# Set up the user loader function
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
