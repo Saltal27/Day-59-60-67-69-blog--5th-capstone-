@@ -53,14 +53,16 @@
             {% if current_user.status == "owner" or current_user.status == "admin": %}
             <!-- New Post -->
             <div class="clearfix">
-                <a class="btn btn-primary float-right mb-3" href="{{url_for('add_new_post')}}">Create New Post</a>
+                <a class="btn btn-primary float-right mt-3 mb-2" href="{{url_for('add_new_post')}}"
+                   style="width: 100%;">Create New Post</a>
             </div>
             {% endif %}
 
             {% if current_user.status == "owner": %}
             <!-- New Post -->
             <div class="clearfix">
-                <a class="btn btn-secondary float-right my-3" href="{{url_for('manage_admins')}}">Manage Admins</a>
+                <a class="btn btn-secondary float-right mb-3 mt-2" href="{{url_for('manage_admins')}}"
+                   style="width: 100%;">Manage Admins</a>
             </div>
             {% endif %}
 

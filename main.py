@@ -15,7 +15,6 @@ import os
 
 MY_EMAIL = os.environ.get("MY_EMAIL")
 MY_PASSWORD = os.environ.get("MY_PASSWORD")
-
 # ------------------ Initializing A Flask App With Some Extensions --------------------- #
 # Initialize the Flask app and set a secret key
 app = Flask(__name__)
@@ -71,7 +70,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
     name = db.Column(db.String(1000))
-    status = db.Column(db.String)
+    status = db.Column(db.String(100))
     posts = db.relationship('BlogPost', backref='author', lazy=True)
     comments = db.relationship('PostComments', backref='user', lazy=True)
 
@@ -311,6 +310,59 @@ def contact():
         span = "Have questions? I have answers."
     return render_template("contact.html", contact_form=contact_form, span=span)
 
+#
+# @app.route("/contact", methods=["POST", "GET"])
+# def contact():
+#     """
+#     A route to display the contact page.
+#
+#     Returns:
+#     str: The rendered HTML template for the contact page.
+#     """
+#
+#     contact_form = ContactMe()
+#     if contact_form.validate_on_submit():
+#         name = contact_form.name.data
+#         email = contact_form.email.data
+#         phone = contact_form.phone_number.data
+#         message = contact_form.message.data
+#         try:
+#             # create message object instance
+#             msg = MIMEMultipart()
+#
+#             # setup the parameters of the message
+#             password = MY_PASSWORD
+#             msg['From'] = MY_EMAIL
+#             msg['To'] = "omarmobarak53@gmail.com"
+#             msg['Subject'] = "New message from 'Omar's Blog' user"
+#
+#             # add in the message body
+#             body = f"Name: {name}\nEmail: {email}\nPhone Number: {phone}\nMessage: {message}"
+#             msg.attach(MIMEText(body, 'plain'))
+#
+#             # create server instance
+#             server = smtplib.SMTP('smtp.gmail.com', 587)
+#
+#             # start TLS for secure connection
+#             server.starttls()
+#
+#             # Login to the server
+#             server.login(msg['From'], password)
+#
+#             # send the message via the server
+#             server.sendmail(msg['From'], msg['To'], msg.as_string())
+#
+#             # close the server connection
+#             server.quit()
+#
+#             span = "Successfully sent your message!"
+#         except:
+#             flash("Sorry, there was an error sending your message, please try again later.")
+#             span = "Have questions? I have answers."
+#     else:
+#         span = "Have questions? I have answers."
+#     return render_template("contact.html", contact_form=contact_form, span=span)
+
 
 # ---------------------------- Posts Managing Routes ------------------------------- #
 @app.route("/post/<int:post_id>", methods=["POST", "GET"])
@@ -338,6 +390,7 @@ def show_post(post_id):
                 )
                 db.session.add(new_comment)
                 db.session.commit()
+                # return redirect(url_for("show_post", post_id=post_id))
         else:
             flash("You need to register / login in order to comment.")
             return redirect(url_for("login"))
@@ -459,6 +512,7 @@ def register():
         if existing_user is None:
             if password == confirm_password:
                 add_user_db(name, email, salted_hash, "member")
+                # return redirect(url_for('auto_login', email=email))
                 user = User.query.filter_by(email=email).first()
                 login_user(user)
                 return redirect(url_for('get_all_posts'))
@@ -470,6 +524,24 @@ def register():
             return redirect(url_for('login'))
 
     return render_template("register.html", register_form=register_form)
+
+
+# @app.route('/auto-login/<email>')
+# @logout_required
+# def auto_login(email):
+#     """
+#     A route to auto log the new registered user.
+#
+#     Parameters:
+#     email (str): The email of the new registered user.
+#
+#     Returns:
+#     str: The rendered HTML template for logging in an existing user.
+#     """
+#
+#     user = User.query.filter_by(email=email).first()
+#     login_user(user)
+#     return redirect(url_for('get_all_posts'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
