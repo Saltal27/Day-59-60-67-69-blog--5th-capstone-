@@ -599,6 +599,76 @@ def logout():
     return redirect(url_for('get_all_posts'))
 
 
+@app.route("/all_users/")
+@admin_only
+def all_users():
+    """
+    A route to show all the blog users.
+
+    Returns:
+    str: The rendered HTML template for showing all the blog users.
+    """
+
+    users = User.query.all()
+    return render_template("users.html", all_users=users)
+
+
+@app.route("/all_admins/")
+@admin_only
+def all_admins():
+    """
+    A route to show all the blog users.
+
+    Returns:
+    str: The rendered HTML template for showing all the blog users.
+    """
+
+    admins = User.query.filter_by(status='admin').all()
+    return render_template("admins.html", all_admins=admins)
+
+
+@app.route("/user/<int:user_id>")
+@admin_only
+def user_info(user_id):
+    """
+    A route to display a user info.
+
+    Parameters:
+    user_id (int): The ID of the user to be displayed.
+
+    Returns:
+    str: The rendered HTML template for the user info.
+    """
+
+    user = User.query.get(user_id)
+    return render_template("user.html", user=user)
+
+
+@app.route("/delete_user/<int:user_id>")
+@owner_only
+def delete_user(user_id):
+    """
+    A route to delete an existing blog member.
+
+    Parameters:
+    user_id (int): The ID of the blog member to be deleted.
+
+    Returns:
+    str: A redirection to the main all users page after deleting the member.
+    """
+
+    BlogPost.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
+
+    PostComments.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
+
+    user_to_delete = User.query.get(user_id)
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    return redirect(url_for('all_users'))
+
+
 @app.route("/manage_admins", methods=["GET", "POST"])
 @owner_only
 def manage_admins():

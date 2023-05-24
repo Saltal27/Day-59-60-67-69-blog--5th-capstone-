@@ -40,6 +40,7 @@
                     {{ ckeditor.load() }}
                     {{ ckeditor.config(name='comment') }}
                     {{ wtf.quick_form(comment_form, novalidate=True, button_map={"submit": "primary"}) }}
+                    <br>
                     <ul class="commentList">
                         {% for comment in all_post_comments: %}
                         <li>
@@ -47,14 +48,26 @@
                                 <img src="{{ comment.user.email | gravatar }}"/>
                             </div>
                             <div class="commentText">
-                                {% if comment.user.status == "owner" or comment.user.status == "admin": %}
-                                <span class="date sub-text" style="font-size: 70%;">{{ comment.user.name }}, {{ comment.user.status }}</span>
+
+                                {% if current_user.status == "owner" or current_user.status == "admin": %}
+                                    {% if comment.user.status == "owner" or comment.user.status == "admin": %}
+                                    <a href="{{url_for('user_info', user_id=comment.user.id)}}" class="date sub-text" style="font-size: 70%;">{{ comment.user.name }}, {{ comment.user.status }}</a>
+                                    {% else: %}
+                                    <a href="{{url_for('user_info', user_id=comment.user.id)}}" class="date sub-text" style="font-size: 70%;">{{ comment.user.name }}</a>
+                                    {% endif %}
+
                                 {% else: %}
-                                <span class="date sub-text" style="font-size: 70%;">{{ comment.user.name }}</span>
+                                    {% if comment.user.status == "owner" or comment.user.status == "admin": %}
+                                    <span class="date sub-text" style="font-size: 70%;">{{ comment.user.name }}, {{ comment.user.status }}</span>
+                                    {% else: %}
+                                    <span class="date sub-text" style="font-size: 70%;">{{ comment.user.name }}</span>
+                                    {% endif %}
+
                                 {% endif %}
                                 <br>
                                 <span class="date sub-text">{{ comment.date }}</span>
                                 <p>{{ comment.text|safe }}</p>
+
                             </div>
                         </li>
                         {% endfor %}

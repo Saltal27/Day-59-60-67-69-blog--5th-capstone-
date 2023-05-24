@@ -1,0 +1,57 @@
+{% include "header.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+<!-- Page Header -->
+<header class="masthead" style="background-image: url('https://d26oc3sg82pgk3.cloudfront.net/files/media/edit/image/33236/article_full%403x.jpg')">
+    <div class="overlay"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-md-10 mx-auto">
+                <div class="post-heading">
+                    <h1>Blog Member Info!</h1>
+                    <span class="meta">Find out what you need to know about a specific user.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-md-10 mx-auto">
+              <hr>
+                Id: {{ user.id }}
+                <br>
+                Name: {{ user.name }}
+                <br>
+                Email: {{ user.email }}
+                <br>
+                Status: {{ user.status }}
+              <hr>
+
+
+              {% if current_user.status == "owner" or current_user.status == "admin": %}
+
+              <div class="clearfix">
+                  <a class="btn btn-primary float-right mt-3 mb-2" href="{{url_for('all_users')}}"
+                     style="width: 100%;">Show All Users</a>
+              </div>
+              {% endif %}
+
+              {% if current_user.status == "owner": %}
+
+              <div class="clearfix">
+                  <a class="btn btn-secondary float-right mb-3 mt-2" href="{{url_for('delete_user', user_id=user.id)}}"
+                     style="width: 100%;">Delete User</a>
+              </div>
+              {% endif %}
+
+            </div>
+        </div>
+    </div>
+</article>
+
+<hr>
+{% include "footer.html" %}

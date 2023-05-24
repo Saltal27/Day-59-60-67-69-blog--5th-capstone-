@@ -2,14 +2,14 @@
 
 <!-- Page Header -->
 <header class="masthead"
-        style="background-image: url('https://images.unsplash.com/photo-1470092306007-055b6797ca72?ixlib=rb-1.2.1&auto=format&fit=crop&w=668&q=80')">
+        style="background-image: url('https://www.searchenginejournal.com/wp-content/uploads/2020/08/7-ways-a-blog-can-help-your-business-right-now-5f3c06b9eb24e-760x400.webp')">
     <div class="overlay"></div>
     <div class="container">
         <div class="row">
             <div class="col-lg-8 col-md-10 mx-auto">
                 <div class="site-heading">
-                    <h1>Omar's Blog</h1>
-                    <span class="subheading">A collection of random musings.</span>
+                    <h1>Blog Members</h1>
+                    <span class="subheading">Find all the blog members in one place.</span>
                 </div>
             </div>
         </div>
@@ -27,22 +27,22 @@
             {% endfor %}
             {% endif %}
             {% endwith %}
-            {% for post in all_posts %}
+            {% for user in all_users %}
             <div class="post-preview">
-                <a href="{{ url_for('show_post', post_id=post.id) }}">
+                <a href="{{url_for('user_info', user_id=user.id)}}">
                     <h2 class="post-title">
-                        {{post.title}}
+                        {{user.name}}
                     </h2>
                     <h3 class="post-subtitle">
-                        {{post.subtitle}}
+                        {{user.email}}
                     </h3>
                 </a>
-                <p class="post-meta">Posted by
-                    <a href="#">{{post.author.name}}</a>
-                    on {{post.date}}
+                <p class="post-meta">Status:
+                    <a href="#">{{user.status}},</a>
+                    Id: {{user.id}}
 
-                    {% if current_user.status == "owner" or current_user.status == "admin": %}
-                    <a href="{{url_for('delete_post', post_id=post.id) }}">✘</a>
+                    {% if current_user.status == "owner": %}
+                    <a href="{{url_for('delete_user', user_id=user.id) }}">✘</a>
                     {% endif %}
 
                 </p>
@@ -53,15 +53,17 @@
             {% if current_user.status == "owner" or current_user.status == "admin": %}
 
             <div class="clearfix">
-                <a class="btn btn-primary float-right mt-3 mb-2" href="{{url_for('add_new_post')}}"
-                   style="width: 100%;">Create New Post</a>
+                <a class="btn btn-primary float-right mt-3 mb-2" href="{{url_for('all_admins')}}"
+                   style="width: 100%;">Show All Admins</a>
             </div>
+            {% endif %}
+
+            {% if current_user.status == "owner": %}
 
             <div class="clearfix">
-                <a class="btn btn-secondary float-right mb-3 mt-2" href="{{url_for('all_users')}}"
-                   style="width: 100%;">Show All users</a>
+                <a class="btn btn-secondary float-right mb-3 mt-2" href="{{url_for('manage_admins')}}"
+                   style="width: 100%;">Manage Admins</a>
             </div>
-
             {% endif %}
 
         </div>
