@@ -15,6 +15,7 @@ import os
 
 MY_EMAIL = os.environ.get("MY_EMAIL")
 MY_PASSWORD = os.environ.get("MY_PASSWORD")
+
 # ------------------ Initializing A Flask App With Some Extensions --------------------- #
 # Initialize the Flask app and set a secret key
 app = Flask(__name__)
@@ -44,6 +45,18 @@ login_manager.init_app(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+# # Set up the database connection
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://omarblog:mysqlpassword@omarblog.mysql.pythonanywhere-services.com:3306/omarblog$default'
+# app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 280, 'pool_timeout': 10}
+# app.config['SQLALCHEMY_POOL_SIZE'] = 5
+# app.config['SQLALCHEMY_POOL_RECYCLE'] = 280
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+#
+# # Use SQLite as a fallback if the MySQL URL fails
+# app.config['SQLALCHEMY_FALLBACK_URI'] = 'sqlite://///home/omarblog/Day-59-60-67-69-blog--5th-capstone-/instance/blog.db'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# db = SQLAlchemy(app)
 
 
 # ---------------------------- DB Tables ------------------------------- #
