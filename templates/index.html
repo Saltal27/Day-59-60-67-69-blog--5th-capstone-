@@ -47,11 +47,11 @@
 
                 </p>
             </div>
-            <hr>
+
             {% endfor %}
 
             {% if current_user.status == "owner" or current_user.status == "admin": %}
-
+            <hr>
             <div class="clearfix">
                 <a class="btn btn-primary float-right mt-3 mb-2" href="{{url_for('add_new_post')}}"
                    style="width: 100%;">Create New Post</a>
